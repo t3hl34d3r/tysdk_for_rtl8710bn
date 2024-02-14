@@ -52,6 +52,7 @@ BIN_DIR=$(TARGET)/Debug/bin
 
 INCLUDES =
 INCLUDES += -I../inc
+INCLUDES += -I../../../component/custom
 INCLUDES += -I../../../component/os/freertos
 INCLUDES += -I../../../component/os/freertos/freertos_v8.1.2/Source/include
 INCLUDES += -I../../../component/os/freertos/freertos_v8.1.2/Source/portable/GCC/ARM_CM4F
@@ -123,6 +124,9 @@ INCLUDES += -I../../../project/realtek_8195a_gen_project/rtl8195a/sw/lib/sw_lib/
 
 SRC_C =
 DRAM_C =
+
+#custom stuff
+SRC_C += ../../../component/custom/serial.c
 
 #app uart_adapter
 ifdef DEF_TY_USE_UTILITY

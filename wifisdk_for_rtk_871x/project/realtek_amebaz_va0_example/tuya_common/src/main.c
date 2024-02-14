@@ -4,6 +4,8 @@
 #include "main.h"
 #include "freertos_pmu.h"
 #include "hal_platform.h"
+#include "serial_api.h"
+#include "serial.c"
 
 #define TUYA_CONSOLE 0
 extern void console_init(void);
@@ -13,12 +15,20 @@ static void app_init_thread(void *param)
  
     HAL_WRITE32(0x40000020, 0, 0x16c08195);
 
-
     extern void user_main(void); // user entry
-    user_main();
+    //user_main();
+    serial_t sobj;
+    serial_init(&sobj,PA_23,PA_18);
+    serial_baud(&sobj,115200);
+    serial_format(&sobj, 8, ParityNone, 1);
+    while(1) {
+        uart_send_string(&sobj, "Hello World!!\r\n");
+        vTaskDelay(1000);
+    }
 
     /* Kill init thread after all init tasks done */
     vTaskDelete(NULL);
+
 }
 void wait_wifi_semaphore(void)
 {

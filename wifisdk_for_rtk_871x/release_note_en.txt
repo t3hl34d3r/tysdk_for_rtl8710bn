@@ -1,0 +1,46 @@
+This document documents what has been modified in each commit since 2018-04-24.
+Each commit is named xx-xx-xx.
+
+commit: 1-0-0
+time: 2018-04-24
+describe:
+	1) Fixed the problem that lowper_special mode can't memorize ap information if it is reset twice in a row.
+	2) Added code to burn in firmware on authorization. It's currently 4k a package, and it takes almost 15s to finish burning (including 3s erasing).
+	(3) In order to adapt to the 2 function, the serial port receiving cache buf of tuya_uart.c is changed from static to dynamic application, and the size can be configured in the ty_uart_init parameter (note: when the authorization timeout exits, we have to call ty_uart_free to release the cache).
+	4) Solve the problem that the LAN control will be blocked in 110s after the device is connected to the Internet and unplugged from the external network (Reason: the keepalive time of the mqtt socket is 60+42s, plus a retry in 5s interval for a total of 107s, during this 107s time, the device will be blocked.
+	   In this 107s time, the device will still send data to the mqtt socket, which leads to the bottom blocking. (Solution: turn off the mqtt socket when the tcp send ack timeout is 3 times).
+	(5) the factory test thread in a command to receive more than 15 times will lose the packet, and the factory test baud rate is 9600, the command 0x07 configuration information packet length is 118 bytes, 15 times will not be received, which leads to the pc side will be issued this command
+	   After this command is issued from the pc, the device did not return the problem (change 15 times to 50 times).
+	6)4 The problem is that after connecting to the Internet, it takes some time (e.g. 10s) to unplug the external network, and when the network is connected and unplugged immediately, the blocking phenomenon occurs again. The reason is that after connecting to mqtt, some http requests will be generated, which will be blocked when connecting to the socket, which leads to the msg
+	   This causes the msg thread to block. The control commands received by the LAN are also handled by msg. Another reason is that the dropdown timer task initiates the HTTP request directly in the timer callback, which also causes the timer thread to block.
+	   Currently only the dropdown timer task has been changed from timer to tm_msg, so that each time the extranet is unplugged it will only block for almost 20s or so.
+	
+commit: 1-0-01
+time: 2018-06-20
+describe:
+	1) Power consumption issue version 1 (50mA or so in standby, 120mA for 3s time in disconnected mode (scanning the router), 32mA for the rest of the time).
+	2) Lowper mode will go into low power mode after successful ap pairing (the reason is that it did not turn off the 3 minutes to detect tmm_msg after successful ap pairing).
+	3) Solved the problem that the module cannot scan the ssid after the device hides the ssid.
+	4) Solve the problem that the networking status can not be restored due to constantly plugging and unplugging the network cable during the ota process:
+		Problem description: a) In select mechanism: close socket can't let recv and send exit when send is blocked.
+				  b) with the mailbox mechanism, the use of signaling mechanism in the close, in the recv exit to let the close continue to perform the del_conn operation (this also includes the judgment of whether to send the operation, and how to let the send exit to the mechanism)
+				 
+commit: 1-0-02
+time: 2018-07-24
+describe:
+	1) Power consumption first version.
+	2) __free_all_del_thrd_node() tunes the order of the two lines of code, DeleteNode(tmp_node,node);Free(tmp_node);.
+	3) http encryption: support for non-encrypted data parsing, determine the downstream data with or without "e" = 1, there is non-encrypted data, there is no encrypted data.
+	4) Combined into the mimo distribution network.
+	5) Flash problem:
+		a) Write flash abnormal power failure will cause the original key-value can not be found, solution: each time you write flash, index page with the same, only modify the value page.
+		b) Write flash will mistakenly allocate the index page out as the value page (see __sf_alloc_data_elem_by_le interface).
+	6) Streaming service was added (additionally started the mqtt service thread all the way).
+	7) Generic firmware:
+		a) combined into the MCU upgrade, while downloading and transferring to the MCU through the serial port (the original practice: all down to flash, do md5 checksum, and then transfer to the MCU, but due to the conflict between this practice and the underlying mechanism of reporting progress (will cause the app interface timeout)).
+		b) Fixed the problem of raw type reporting timeout (the misunderstanding of ms and s).
+		c) Added stream service, start/stop heartbeat, wifi signal query commands.
+	8) rtk bottom layer merged into patch for distribution optimization and mimo.
+	9) reset the device before gw_cntl_init is dropped, it will cause thread blocking, solution: add protection, reset before gw_cntl_init call will not respond.	
+	10) wifi adaptation layer: wifi scanning changed interface, wifi scanning and setting working mode added mutual exclusion lock.
+	11) tuya_key.c: add action of detecting key press for a valid key press (application layer doesn't need to do de-jitter operation).
